@@ -179,6 +179,15 @@ namespace ChatApp.Models
 		        db.Execute(insertSql, new{UserId = userId, BlockId = friendId});
             }
         }
+        public void removeBlacklist(string UserId, string friendName)
+        {
+            using (IDbConnection db = new SqlConnection(connectionString))
+            {
+                string sql = "delete from Blacklist where UserId = @UserId and BlockedUserId = @BlockedUserId";
+                db.Execute(sql, new { UserId = UserId, BlockedUserId = getIdByUsername(friendName) });
+            }
+        }
+
         public void addFriend(ApplicationUser user, string friendName)
         {
             string friendId = getIdByUsername(friendName);

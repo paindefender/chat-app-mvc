@@ -134,7 +134,6 @@ namespace ChatApp.Controllers
         }
 
         [HttpPost]
-
         public ActionResult GetConfMessages(int confId)
         {
             var msgs = repo.getConfMsg(confId);

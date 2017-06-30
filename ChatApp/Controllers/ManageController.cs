@@ -360,7 +360,7 @@ namespace ChatApp.Controllers
             var repo = new DapperRepository();
             var Id = System.Web.HttpContext.Current.User.Identity.GetUserId();
             ViewBag.img = repo.getProfilePicture(Id);
-            return RedirectToAction("ChangePicture", "Manage");
+            return View();
         }
         [HttpPost]
         public ActionResult ChangePicture(HttpPostedFileBase file)
@@ -385,6 +385,22 @@ namespace ChatApp.Controllers
                 repo.setProfilePicture(System.Web.HttpContext.Current.User.Identity.GetUserId(), ImgRelPath);
             }
             return RedirectToAction("ChangePicture", "Manage");
+        }
+
+        [HttpGet]
+        public ActionResult Blacklist()
+        {
+            var repo = new DapperRepository();
+
+            ViewBag.list = repo.getBlockedUsernames(System.Web.HttpContext.Current.User.Identity.GetUserId());
+            return View();
+        }
+        [HttpPost]
+        public ActionResult Blacklist(string username)
+        {
+            var repo = new DapperRepository();
+            repo.removeBlacklist(System.Web.HttpContext.Current.User.Identity.GetUserId(), username);
+            return new EmptyResult();
         }
 #region Helpers
         // Used for XSRF protection when adding external logins

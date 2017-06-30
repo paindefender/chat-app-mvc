@@ -255,6 +255,7 @@
     <Content Include="secret.config" />
     <Content Include="Views\Manage\ChangeInfo.cshtml" />
     <Content Include="Views\Manage\ChangePicture.cshtml" />
+    <Content Include="Views\Manage\Blacklist.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
