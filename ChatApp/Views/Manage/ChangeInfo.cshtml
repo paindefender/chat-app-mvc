@@ -1,0 +1,34 @@
+﻿@model ChatApp.Models.FinishSetupViewModel
+@{
+    ViewBag.Title = "ChangeInfo";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+@Styles.Render("~/Content/bootstrap-tagsinput.css")
+@Scripts.Render("~/Scripts/bootstrap-tagsinput.js")
+<h2>ChangeInfo</h2>
+
+@using (Html.BeginForm())
+{
+    <fieldset>
+        <legend>Choose your gender</legend>
+        Male:   @Html.RadioButtonFor(m => m.Gender, "M")
+        Female: @Html.RadioButtonFor(m => m.Gender, "F")
+    </fieldset>
+    <fieldset>
+        <legend>Choose your city</legend>
+        @Html.DropDownListFor(m => m.CityId,
+                    new SelectList(ViewBag.cityList, "CityId", "CityNameAccent"))
+    </fieldset>
+    <fieldset>
+        <legend>Edit your interests</legend>
+        @Html.TextBoxFor(m => m.Interests, new { data_role="tagsinput", name="interests", id="interests", @class="form-control" })
+        <script>
+                    $('#interests').tagsinput({
+                        maxChars: 8,
+                        trimValue: true
+                    });
+        </script>
+    </fieldset>
+    <br />
+    <input class="btn btn-primary" type="submit" value="Next" />
+}

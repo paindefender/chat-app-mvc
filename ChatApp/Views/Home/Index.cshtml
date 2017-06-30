@@ -1,0 +1,14 @@
+﻿@{
+    ViewBag.Title = "Home Page";
+}
+
+@if (Request.IsAuthenticated)
+{
+    Response.Redirect("~/Chat/Index");
+}
+
+<div class="jumbotron">
+    <h1>Chat</h1>
+    <p class="lead">Please log in or register</p>
+    <p><a href="~/Account/Login" class="btn btn-success btn-lg">Log In &raquo;</a>  <a href="~/Account/Register" class="btn btn-primary btn-lg">Register &raquo;</a></p>
+</div>

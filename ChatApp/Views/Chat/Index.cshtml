@@ -1,0 +1,332 @@
+﻿@using ChatApp.Models;
+@model ChatApp.Models.ApplicationUser
+
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var repo = new DapperRepository();
+    var currentUser = repo.GetCurrentUser();
+    var friends = repo.getFriendsById(currentUser.Id);
+    var conferences = repo.getConfsById(currentUser.Id);
+    var blacklist = repo.getBlockedUsernames(currentUser.Id);
+    var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+}
+
+<script type="text/javascript">
+    var blacklist = @Html.Raw(serializer.Serialize(blacklist));
+    function jq(myid) { // Id escaping function
+        return "#" + myid.replace(/(:|\.|\[|\]|,|=|@@)/g, "\\$1");
+    }
+
+    var chatHub = $.connection.chatHub;
+    $.connection.hub.start().done(function () {
+    });
+    chatHub.client.userOnline = function (userName) {
+        //make online
+        $("li" + jq(userName) + " p.status").remove();
+        $("li" + jq(userName)).first().append("<p class='status' id='statusOnline'>Online</p>");
+    }
+    chatHub.client.userOffline = function (userName) {
+        //make offline
+        $("li" + jq(userName) + " p.status").remove()
+    }
+    chatHub.client.getOnlineUsers = function (userNameSet) {
+        $('.friendlist.fll li').each(function () {
+            for (i = 0; i < userNameSet.length; i++){
+                if ($(this).attr('id') == userNameSet[i]){
+                    userNameSet.splice(i, 1);
+                    $(this).append("<p class='status'>Online</p>");
+                    break;
+                }
+            }
+        });
+        console.log(userNameSet);
+    }
+
+    function switchUser(username) {
+        //$(".messages").html(username);
+        pickUser(username);
+    }
+    
+    var pickedUser = false;
+    var pickedConf = false;
+
+    chatHub.client.addMessage = function (message) {
+        //addMessage
+        if ($.inArray(message.srcUser, blacklist) != -1) {
+            return; //If user is blacklisted do not show the message
+        }
+        if (message.confTarget === null) {
+            if (message.userTarget == '@currentUser.UserName'){
+                if (pickedUser == message.srcUser) {
+                    $('.messages').append('<p><b>' + message.srcUser + '</b>: ' + message.body + '</p>');
+                    classScrollToBottom('messages');
+                } else {
+                    //Notify user?
+                    alert('New message from ' + message.srcUser);
+                }
+            }
+        } else {
+            if (pickedConf == message.confTarget) {
+                $('.messages').append('<p><b>' + message.srcUser + '</b>: ' + message.body + '</p>');
+                classScrollToBottom('messages');
+            } else {
+                //Notify user?
+                if ($('#conferencelist li#' + message.confTarget).length) {
+                    alert('New message from conference ' + $('#conferencelist li#' + message.confTarget).text());
+                }
+            }
+        }
+    };
+
+    function pickUser(username) {
+        if (!pickedUser) {
+            pickedUser = username;
+            pickedConf = false;
+        } else {
+            $(jq(pickedUser)).css("background-color", "#ffffff");
+            pickedUser = username;
+            pickedConf = false;
+        }
+        $(jq(username)).css("background-color", "#e8efef");
+
+        $.ajax({
+            type: 'POST',
+            url: '@Url.Action("GetUsrMessages", "Chat")',
+            data: {
+                username: username,
+            },
+            success: function (msgs) {
+                $('#menu').hide();
+                $("#menu").html("<a onclick='blacklistFriend()'>Blacklist Friend</a><a onclick='deleteFriend()'>Delete Friend</a>");
+                $('#menu').show(200);
+                $(".messages").html("");
+                msgs.forEach(function (item) {
+                    var a = (item.fromId === '@currentUser.Id') ? '@currentUser.UserName' : username;
+                    $(".messages").append("<p><b>" + a + ": </b>" + item.Body + "</p>");
+                    classScrollToBottom('messages');
+                });
+            }
+        });
+    }
+
+    function deleteFriend() {
+        if (pickedUser == false) return;
+        chatHub.server.deleteFriend(pickedUser);
+    }
+
+    chatHub.client.deleteFriendVisual = function (friendName) {
+        $('#menu').hide(100);
+        $(jq(friendName) + ', .' + friendName).hide(444);
+        pickedUser = false;
+        $(".messages").html("<h1>Friend deleted</h1>");
+    }
+
+    function blacklistFriend() {
+        if (pickedUser == false) return;
+        blacklist.push(pickedUser);
+        chatHub.server.blacklistFriend(pickedUser);
+        deleteFriend();
+    }
+
+    function sendMsg() {
+        var msgVal = $("#message").val();
+        $("#message").val("");
+        if (pickedUser == false && pickedConf == false) return;
+        if (msgVal.length == 0) return;
+        var message = {
+            body: msgVal,
+            userTarget: pickedUser ? pickedUser : null,
+            confTarget: pickedConf ? pickedConf : null,
+            srcUser: '@currentUser.UserName'
+        }
+
+        $.post('@Url.Action("SendMessage","Chat")', message).done(function () {
+            chatHub.server.sendMessage(message);
+            $(".messages").append('<p><b>@currentUser.UserName: </b>' + msgVal + '<p>');
+            classScrollToBottom('messages');
+        });
+        //Find out if user/group is online;
+
+        console.log(message);
+    }
+
+    function classScrollToBottom(className) {
+        var m = document.getElementsByClassName(className)[0];
+        m.scrollTop = m.scrollHeight;
+    }
+
+    function manageConfUsers(id) {
+        $('#usersModal').modal();
+    }
+
+    $(function () {
+        $("#menu").hide(200);
+
+        var i = 0;
+        $("#addConf").click(function () {
+            $("#conferencelist").prepend('<li class="newconf' + i++ + '"><input placeholder="Conference name" class="form-control"></input></li>');
+            $(".newconf" + i).focus();
+        });
+
+        $("#conferencelist").keypress(function (e) {
+            if (e.which == 13) {
+                var id;
+                $(":focus").each(function () {
+                    var myClasses = $(this).parent()[0].classList;
+                    myClass = myClasses[0];
+                });
+                if (/newconf/.test(myClass)) {
+                    var confname = $("." + myClass + " input").val();
+                    $.ajax({
+                        type: 'POST',
+                        url: '@Url.Action("AddNewConf", "Chat")',
+                        data: {
+                            confname: confname,
+                        },
+                        success: function (data) {
+                            console.log(data);
+                            $("." + myClass).replaceWith('<li id="' + data.confId + '" class="conference"><a>' + confname + '</a></li>')
+                        }
+                    });
+                }
+            }
+        });
+        $("#conferencelist").on('click', 'a', function (e) {
+            if (pickedUser)
+                $(jq(pickedUser)).css("background-color", "#ffffff");
+            pickedUser = false;
+            var confId = $(this).parent()[0].id;
+            pickedConf = confId;
+            var confName = $(this).text();
+            $("div h4").html(confName);
+            $('#menu').hide();
+            $("#menu").html("<a onclick='manageConfUsers(" + confId + ")'>Add Users</a>");
+            $("#menu").show(200);
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetConfUsers", "Chat")',
+                data: {
+                    confId: confId,
+                },
+                success: function (data) {
+                    console.log(data);
+                    userNames = {};
+                    for (var i = 0; i < data.length; i++) {
+                        userNames[data[i].UserName] = true;
+                    }
+                    $("#modal-friends li button").removeClass('disabled');
+                    $("#modal-friends li").each(function () {
+                        if (userNames[this.className]) {
+                            $(this).find('button').addClass('disabled');
+                        }
+                    });
+                }
+            });
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("GetConfMessages", "Chat")',
+                data: {
+                    confId: confId,
+                },
+                success: function (msgs) {
+                    $(".messages").html("");
+                    msgs.forEach(function (item) {
+                        if ($.inArray(item.fromName, blacklist) != -1)
+                            return;
+                        $(".messages").append("<p><b>" + item.fromName + ": </b>" + item.Body + "</p>");
+                        classScrollToBottom('messages');
+                    });
+                }
+            });
+        });
+        $(".add-conf-user").on('click', function (e) {
+            var element = $(this);
+            var user_name = $(this).parent()[0].classList[0];
+            var conf_id = pickedConf;
+            $.ajax({
+                type: 'POST',
+                url: '@Url.Action("AddUserToConf", "Chat")',
+                data: {
+                    userName: user_name,
+                    confId: conf_id,
+                },
+                success: function (data) {
+                    element.addClass("disabled");
+                }
+            });
+        });
+    });
+
+
+</script>
+
+
+
+<!-- Modal -->
+<div id="usersModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <h4 class="modal-title">Modal Header</h4>
+            </div>
+            <div class="modal-body">
+                <div id="modal-friends">
+                    <ul class="friendlist">
+                        @foreach (var friend in friends)
+                        {
+                            if (blacklist.Contains(friend.UserName)) { continue; }
+                            <li class="@friend.UserName"><div class="avatar" style='background:url("@friend.PhotoPath") center no-repeat; background-size:cover;height:84px; width:84px; margin-top:1rem'></div> <span class="username"><b>@friend.UserName</b></span> <button class="btn btn-default add-conf-user">Add</button></li>
+                        }
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xs-8">
+        <div id="menu" class="row menu">Menu</div>
+        <div class="row messages">
+            <p>Choose the user or conference</p>
+        </div>
+        <div class="row">
+            <textarea name="message" id="message" class="form-control input" placeholder="Message" rows="5"></textarea>
+            <button id="sendButton" class="btn btn-success form-control" onclick="sendMsg()">Send</button>
+        </div>
+    </div>
+    <div class="col-xs-4 sidebar">
+        <ul class="nav nav-tabs">
+            <li class="active"><a data-toggle="tab" href="#friends">Friends</a></li>
+            <li><a data-toggle="tab" href="#conferences">Conferences</a></li>
+        </ul>
+        <div class="tab-content">
+            <div id="friends" class="tab-pane fade in active">
+                <ul class="friendlist fll">
+                @foreach (var friend in friends)
+                {
+                    if (blacklist.Contains(friend.UserName)) { continue; }
+                    <li id="@friend.UserName"><a onclick="switchUser('@friend.UserName')"><div class="avatar" style='background:url("@friend.PhotoPath") center no-repeat;background-size:cover;height:84px; width:84px;margin-top:1rem'></div>@friend.UserName</a></li>
+                }
+                </ul>
+            </div>
+            <div id="conferences" class="tab-pane fade">
+                <button class="btn btn-success form-control" id="addConf">Create new conference</button>
+                <ul id="conferencelist">
+                    @foreach (var conference in conferences)
+                    {
+                        <li id="@conference.ConfId" class="conference"><a>@conference.ConfName</a></li>
+                    }
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

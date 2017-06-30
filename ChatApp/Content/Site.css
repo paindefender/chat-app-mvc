@@ -1,0 +1,77 @@
+﻿body {
+    padding-top: 50px;
+    padding-bottom: 20px;
+    font-family: Helvetica, Verdana, sans-serif;
+}
+
+/* Set padding to keep content from hitting the edges */
+.body-content {
+    padding-left: 15px;
+    padding-right: 15px;
+}
+
+/* Override the default bootstrap behavior where horizontal description lists 
+   will truncate terms that are too long to fit in the left column 
+*/
+.dl-horizontal dt {
+    white-space: normal;
+}
+
+/* Set width on the form input elements since they're 100% wide by default */
+/*input,
+select,
+textarea {
+    max-width: 280px;
+}*/
+
+.friendlist li {
+    clear:both;
+    display: flex;
+    /*justify-content: center;*/
+    align-items: center; /* align vertical */
+}
+.messages {
+    overflow: auto;
+    overflow-wrap: break-word;
+    word-break: break-all;
+    height: 65vh;
+}
+
+.input {
+    resize: none;
+}
+
+.sidebar {
+    overflow: auto;
+    height: 100vh;
+}
+.friendlist {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+#conferencelist{
+    list-style-type: none;
+    margin:0;
+    padding:0;
+}
+
+.conference{
+    font-size: 2rem;
+}
+
+a{
+    cursor: pointer;
+}
+
+.menu{
+    border: 1px solid black;
+    padding: 4px 7px 4px 15px;
+}
+
+.avatar{
+    border:3px solid white; 
+    box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    float:left;
+}

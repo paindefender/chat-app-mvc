@@ -1,0 +1,36 @@
+﻿
+@{
+    ViewBag.Title = "Change Picture";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<h2>Change Avatar</h2>
+@using (Html.BeginForm("ChangePicture", "Manage", FormMethod.Post,
+                            new { enctype = "multipart/form-data" }))
+{
+    <fieldset>
+        <legend>Upload a photo</legend>
+        <input id="file" accept="image/*" type="file" name="file" />
+        <img id="img" style="width:20rem" src="@ViewBag.img" alt="" />
+    </fieldset>
+    <input class="btn btn-primary" type="submit" value="Ok" />
+}
+<script>
+    //Image preview script from
+    function readURL(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+
+            reader.onload = function (e) {
+                $('#img').attr('src', e.target.result);
+            }
+
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    $("#file").change(function () {
+        readURL(this);
+    });
+</script>
+

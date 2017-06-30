@@ -1,0 +1,99 @@
+﻿@model ChatApp.Models.SearchSelectViewModel
+@using ChatApp.Models;
+@{
+    ViewBag.Title = "Search";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    var repo = new DapperRepository();
+    var currentUser = repo.GetCurrentUser();
+    IEnumerable<UserResultViewModel> users = new List<UserResultViewModel>();
+    users = repo.getFriendsSearchResults(Model);
+    IEnumerable<UserResultViewModel> friends = new HashSet<UserResultViewModel>();
+    friends = repo.getFriendsById(currentUser.Id);
+    var blacklist = repo.getBlockedUsernames(currentUser.Id);
+}
+@Styles.Render("~/Content/bootstrap-tagsinput.css", "~/Content/search.css")
+@Scripts.Render("~/Scripts/bootstrap-tagsinput.js")
+<script>
+    //ajax add friend buttons
+    $(document).ready(function () {
+        $(".addfriend").click(function () {
+            var friend = $(this).attr('id');
+            $(this).attr("disabled", "disabled").off('click');
+            $(this).html('<span class="glyphicon glyphicon-hourglass"></span>');
+            var element = $(this);
+            $.post('@Url.Action("AddFriend","Chat")', { friendName: friend })
+              .done(function (data) {
+                  element.html('Added <span class="glyphicon glyphicon-ok"></span>');
+                  //$(this).attr("disabled", "disabled").off('click');
+                  
+              })
+              .fail(function (data) {
+                  alert("Failed");
+                  element.html('<span class="glyphicon glyphicon-plus"></span><span class="glyphicon glyphicon-user">');
+              });
+        });
+    });
+</script>
+<div class="row">
+    <div class="col-sm-3">
+        <h3>Параметры</h3>
+        @using (Html.BeginForm("Search", "Chat", FormMethod.Get))
+        {
+            <div class="form-group">
+                <label class="checkbox-inline">@Html.CheckBoxFor(x => x.UseName) Имя:</label>
+                @Html.TextBoxFor(x => x.UserName, new { @class = "form-control", placeholder = "Имя"})
+            </div>
+            <div class="form-group">
+                <label class="checkbox-inline">@Html.CheckBoxFor(x => x.UseGender) Пол:</label>
+                <select class="form-control" name="gender" id="gender">
+                    <option disabled selected>Выберите пол</option>
+                    <option value="F">Female</option>
+                    <option value="M">Male</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="checkbox-inline">@Html.CheckBoxFor(x => x.UseCity) Город:</label>
+                @Html.TextBoxFor(x => x.CityName, new { @class = "form-control", placeholder="Город"})
+            </div>
+            <div class="form-group">
+                <label class="checkbox-inline">@Html.CheckBoxFor(x => x.UseInterests) Интересы:</label>
+                @Html.TextBoxFor(x => x.Interests, new { @class = "form-control", data_role = "tagsinput" })
+                <script>
+                    $('#Interests').tagsinput({
+                        maxChars: 8,
+                        trimValue: true
+                    });
+                </script>
+            </div>
+            <input style="position:absolute; right:0" type="Submit" class="btn btn-primary" value="Search" />
+        }
+    </div>
+    <div class="col-sm-9" style="height:100vh; overflow-y:auto">
+        <h3>Найдено: </h3>
+        <ul class="foundUsers">
+            @foreach (var item in users)
+            {
+                if (blacklist.Contains(item.UserName)) { continue; } //Do not show blacklisted people
+                <li>
+                    <a href="#">
+                        <!--<img src="" alt="@item.UserName" />-->
+                        <div class="avatar" style='background:url("@item.PhotoPath") center no-repeat;float:left;background-size:cover;height:84px; width:84px;margin-top:1rem;'></div>
+                        <p><b>@item.UserName</b></p>
+                    </a>
+                    @if (item.UserName.Equals(currentUser.UserName))
+                    {
+                        <div class="btn btn-warning" style="font-variant:small-caps;font-weight:900">It's you!</div>
+                    }
+                    else if (friends.Contains(item))
+                    {
+                        <div class="btn btn-warning" style="font-variant:small-caps;font-weight:900">Your friend!</div>
+                    }
+                    else
+                    {
+                        <div class="btn btn-success addfriend" id="@item.UserName"><span class="glyphicon glyphicon-plus"></span><span class="glyphicon glyphicon-user"></span></div>
+                    }
+                    </li>
+            }
+        </ul>
+    </div>
+</div>

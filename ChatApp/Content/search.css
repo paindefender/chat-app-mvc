@@ -1,0 +1,23 @@
+﻿.foundUsers ul, li{
+    list-style-type: none;
+}
+.foundUsers li{
+    height: 8rem;
+    clear: both;
+    display:flex;
+    align-items:center;
+    margin-top: 1.5rem;
+}
+.foundUsers b{
+    margin: 1rem;
+    font-size: 2rem;
+}
+.foundUsers img{
+    max-width: 8rem;
+    max-height: 8rem;
+    float:left;
+}
+.foundUsers a{
+    display: flex;
+    text-decoration:none;
+}
